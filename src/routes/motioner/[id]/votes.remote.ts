@@ -1,0 +1,83 @@
+import { db } from "#lib";
+import { form, getRequestEvent, query } from "$app/server";
+import { EventEmitter, on } from "node:events";
+
+import * as v from "valibot";
+
+const emitter = new EventEmitter();
+emitter.setMaxListeners(0);
+
+export const getVote = query.live(v.string(), async function* (id) {
+    yield await db.orm.public.Votes.where({ motionId: id }).all()
+    for await (const _ of on(emitter, id)) {
+        yield await db.orm.public.Votes.where({ motionId: id }).all()
+    }
+});
+
+export const getVotesFor = query.live(v.string(), async function* (id) {
+    var tallyFor = 0;
+    for await (const vote of db.orm.public.Votes.where({ motionId: id}).all()){
+        if (vote.position == "FÖR"){
+            tallyFor = tallyFor + 1
+            console.log(tallyFor)
+        }
+    };
+    yield tallyFor;
+    for await (const _ of on(emitter, id)) {
+        var tallyFor = 0;
+        for await (const vote of db.orm.public.Votes.where({ motionId: id}).all()){
+            if (vote.position == "FÖR"){
+                tallyFor = tallyFor + 1
+                console.log(tallyFor)
+            }
+        };
+        yield tallyFor;
+    }
+})
+
+export const getVotesAgainst = query.live(v.string(), async function* (id) {
+    var tallyAgainst = 0;
+    for await (const vote of db.orm.public.Votes.where({ motionId: id}).all()){
+        if (vote.position == "EMOT"){
+            tallyAgainst += 1
+        }
+    };
+    yield tallyAgainst;
+    for await (const _ of on(emitter, id)) {
+        var tallyAgainst = 0;
+        for await (const vote of db.orm.public.Votes.where({ motionId: id}).all()){
+            if (vote.position == "EMOT"){
+                tallyAgainst += 1
+            }
+        };
+        yield tallyAgainst;
+    }
+})
+
+export const addVoteFor = form(
+    v.object({
+        id: v.string(),
+    }),
+    async ({id}) => {
+        const {cookies} = getRequestEvent()
+        const sender = await db.orm.public.User.where({ id: cookies.get("user_id")}).first()
+        if (!sender)
+            return;
+        await db.orm.public.Votes.create({position: "FÖR", motionId: id, voter: sender.username})
+        emitter.emit(id)
+    }
+)
+
+export const addVoteAgainst = form(
+    v.object({
+        id: v.string(),
+    }),
+    async ({id}) => {
+        const {cookies} = getRequestEvent()
+        const sender = await db.orm.public.User.where({ id: cookies.get("user_id")}).first()
+        if (!sender)
+            return;
+        await db.orm.public.Votes.create({position: "EMOT", motionId: id, voter: sender.username})
+        emitter.emit(id)
+    }
+)

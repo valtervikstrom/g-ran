@@ -1,0 +1,21 @@
+// use prisma-8
+
+model User {
+  id        String      @unique @id @default(uuid())
+  username  String      @unique
+  passwordHash  String
+}
+
+model Motion {
+  id        String      @unique @id @default(uuid())
+  creator   String      @default("Oregistrerad")
+  name      String
+  votes     Votes[]
+}
+
+model Votes {
+  position  String
+  voter     String
+  motion    Motion      @relation(fields: [motionId], references: [id])
+  motionId  String
+}
