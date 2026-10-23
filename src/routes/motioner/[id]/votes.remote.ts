@@ -1,4 +1,5 @@
 import { db } from "#lib";
+import { hashToken } from "#lib/server/session.ts";
 import { form, getRequestEvent, query } from "$app/server";
 import { EventEmitter, on } from "node:events";
 
@@ -60,7 +61,9 @@ export const addVoteFor = form(
     }),
     async ({id}) => {
         const {cookies} = getRequestEvent()
-        const sender = await db.orm.public.User.where({ id: cookies.get("user_id")}).first()
+        const cookie_receiver = cookies.get("session")
+        const token_checker = await db.orm.public.Session.where({ tokenHash: hashToken(cookie_receiver)}).first()
+        const sender = await db.orm.public.User.where({ id: token_checker?.userid}).first()
         if (!sender)
             return;
         const lastVote = await db.orm.public.Votes.where({ voter: sender.username, motionId: id }).all()
@@ -78,7 +81,9 @@ export const addVoteAgainst = form(
     }),
     async ({id}) => {
         const {cookies} = getRequestEvent()
-        const sender = await db.orm.public.User.where({ id: cookies.get("user_id")}).first()
+        const cookie_receiver = cookies.get("session")
+        const token_checker = await db.orm.public.Session.where({ tokenHash: hashToken(cookie_receiver)}).first()
+        const sender = await db.orm.public.User.where({ id: token_checker?.userid}).first()
         if (!sender)
             return;
         const lastVote = await db.orm.public.Votes.where({ voter: sender.username, motionId: id }).all()
