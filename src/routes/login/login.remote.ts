@@ -4,7 +4,7 @@ import { redirect, invalid } from "@sveltejs/kit";
 import { error } from "node:console";
 import * as v from "valibot";
 import { db } from "#lib";
-import { createToken } from "#lib/server/jwt.js";
+import { hashToken } from "#lib/server/session.js";
 
 export const login = form(
     v.object({
@@ -12,12 +12,14 @@ export const login = form(
         _password: v.string()
     }),
     async ({username, _password}) => {
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         const {cookies} = getRequestEvent();
         const user = await db.orm.public.User.where({ username }).first();
         if (!user || !verifyPassword(_password, user.passwordHash)){
             return {error: 'Wrong username or password'}}
         else {
-            const token = await createToken(user.id)
+            await db.orm.public.Session.create({tokenHash: hashToken(token), userid: user.id})
             cookies.set("session", token, { path: "/", httpOnly: true})
             redirect(303, "/")
         }
@@ -27,6 +29,9 @@ export const login = form(
 export const logout = form(
     async () => {
     const {cookies} = getRequestEvent();
+    const token = cookies.get("session");
+    if (token != undefined)
+        db.orm.public.Session.where({ tokenHash: hashToken(token) }).delete()
     cookies.delete("session", {path: "/"})}
 )
 

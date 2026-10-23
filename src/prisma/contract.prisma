@@ -4,6 +4,7 @@ model User {
   id        String      @unique @id @default(uuid())
   username  String      @unique
   passwordHash  String
+  sessions     Session[]
 }
 
 model Motion {
@@ -18,4 +19,11 @@ model Votes {
   voter     String
   motion    Motion      @relation(fields: [motionId], references: [id])
   motionId  String
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  user      User     @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid    String
 }

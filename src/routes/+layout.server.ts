@@ -2,22 +2,28 @@ import type { LayoutServerLoad } from './$types';
 import { getRequestEvent } from '$app/server';
 import { redirect } from '@sveltejs/kit';
 import { db } from '#lib';
-import { readToken } from '#lib/server/jwt.js';
+import { hashToken } from '#lib/server/session.js';
 
 export const load = (async ({cookies, url}) => {
-    const token_cookie = cookies.get("session")
-    const logged_in_user = await readToken(token_cookie)
-    if (logged_in_user != undefined){
-        let user  = await db.orm.public.User.where({ id: logged_in_user }).first()
-        if (user == null && url.pathname != "/login" && url.pathname != "/register" && url.pathname != "/motioner")
-            redirect(303, "/login")
-        else if (user != null)
-            return {username: user?.username};
-    }
+    const token = cookies.get("session")
+    if (token != undefined){
+        const session = await db.orm.public.Session.where({ tokenHash: hashToken(token) }).first()
 
-    if (logged_in_user == undefined){
+        if (session != undefined){
+            let user  = await db.orm.public.User.where({ id: session.userid }).first()
+            if (user == null && url.pathname != "/login" && url.pathname != "/register" && url.pathname != "/motioner")
+                redirect(303, "/login")
+            else if (user != null)
+                return {username: user?.username};
+        }
+
+        if (session == undefined){
+            if (url.pathname != "/login" && url.pathname != "/register")
+                redirect(303, "/login")}
+    }
+    else{
         if (url.pathname != "/login" && url.pathname != "/register")
-            redirect(303, "/login")}
-    
+                redirect(303, "/login")
+    }
     return {};
 }) satisfies LayoutServerLoad;
