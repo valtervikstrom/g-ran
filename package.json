@@ -56,6 +56,7 @@
     "@prisma/orm-postgres": "^8.0.0-rc.18",
     "@sveltejs/adapter-node": "^6.0.0",
     "dotenv": "^18.0.8",
+    "jose": "^6.2.13",
     "valibot": "^1.5.0"
   }
 }

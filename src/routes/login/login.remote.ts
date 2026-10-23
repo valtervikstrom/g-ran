@@ -4,6 +4,7 @@ import { redirect, invalid } from "@sveltejs/kit";
 import { error } from "node:console";
 import * as v from "valibot";
 import { db } from "#lib";
+import { createToken } from "#lib/server/jwt.js";
 
 export const login = form(
     v.object({
@@ -16,7 +17,8 @@ export const login = form(
         if (!user || !verifyPassword(_password, user.passwordHash)){
             return {error: 'Wrong username or password'}}
         else {
-            cookies.set("user_id", user.id, { path: "/", httpOnly: true})
+            const token = await createToken(user.id)
+            cookies.set("session", token, { path: "/", httpOnly: true})
             redirect(303, "/")
         }
     }
@@ -25,7 +27,7 @@ export const login = form(
 export const logout = form(
     async () => {
     const {cookies} = getRequestEvent();
-    cookies.delete("user_id", {path: "/"})}
+    cookies.delete("session", {path: "/"})}
 )
 
 function verifyPassword(password: string, stored: string){
