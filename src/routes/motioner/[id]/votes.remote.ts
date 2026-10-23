@@ -63,6 +63,10 @@ export const addVoteFor = form(
         const sender = await db.orm.public.User.where({ id: cookies.get("user_id")}).first()
         if (!sender)
             return;
+        const lastVote = await db.orm.public.Votes.where({ voter: sender.username, motionId: id }).all()
+        console.log(lastVote)
+        if (lastVote.length != 0)
+            return
         await db.orm.public.Votes.create({position: "FÖR", motionId: id, voter: sender.username})
         emitter.emit(id)
     }
@@ -77,6 +81,9 @@ export const addVoteAgainst = form(
         const sender = await db.orm.public.User.where({ id: cookies.get("user_id")}).first()
         if (!sender)
             return;
+        const lastVote = await db.orm.public.Votes.where({ voter: sender.username, motionId: id }).all()
+        if (lastVote.length != 0)
+            return
         await db.orm.public.Votes.create({position: "EMOT", motionId: id, voter: sender.username})
         emitter.emit(id)
     }
