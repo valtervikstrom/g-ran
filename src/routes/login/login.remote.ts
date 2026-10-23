@@ -19,6 +19,10 @@ export const login = form(
         if (!user || !verifyPassword(_password, user.passwordHash)){
             return {error: 'Wrong username or password'}}
         else {
+            const other_units = await db.orm.public.Session.where({ userid: user.id }).all()
+            for (const unit of other_units){
+                await db.orm.public.Session.where({ userid: user.id }).delete()
+            }
             await db.orm.public.Session.create({tokenHash: hashToken(token), userid: user.id})
             cookies.set("session", token, { path: "/", httpOnly: true})
             redirect(303, "/")
